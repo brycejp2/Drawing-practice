@@ -1,9 +1,15 @@
 # Drawing Practice — App Plan
 
-An app that teaches drawing, lettering in multiple styles, and pen control through
-guided tracing. Every exercise is built from **directed strokes**: the app shows where
-to start, which way to go, and in what order. The user traces with a finger or stylus
-and gets scored on accuracy, direction, order, and control.
+A mobile app that teaches drawing, lettering in multiple styles, and pen control
+through guided tracing. Every exercise is built from **directed strokes**: the app shows
+where to start, which way to go, and in what order. The user traces with a finger or
+stylus and gets scored on accuracy, direction, order, and control.
+
+**Decisions so far**
+- Primary platform: native mobile apps (iOS and Android, phones and tablets).
+- Audience: beginners to intermediate, middle school age (11+) and older.
+- Content: authored in-house. No community packs for now.
+- Monetization: undecided. Options are laid out in section 8.
 
 ---
 
@@ -14,11 +20,11 @@ and gets scored on accuracy, direction, order, and control.
 - Cover three content areas with one shared engine: pen exercises, lettering, drawing.
 - Give immediate, specific feedback per stroke ("started at the wrong end", "drifted
   right on the curve"), not just a pass/fail.
-- Work offline, on a tablet with a stylus first, but also on phones and desktops.
+- Work offline, feel great with a stylus, and still be usable with a finger on a phone.
 
 **Non-goals (for v1)**
 - Free-form sketching app with layers, brushes, and export to PSD.
-- Social feed. Sharing exercise packs can come later.
+- Social feed, sharing, or user-generated exercise packs.
 - Handwriting recognition (OCR). We compare against a known reference, which is a much
   easier and more useful problem.
 
@@ -65,9 +71,8 @@ Passing a tier (e.g. 80% three times) unlocks the next one for that exercise.
 - Hatching and cross-hatching with even spacing.
 - Pressure ramps: light-to-heavy along one line (needs a pressure-capable stylus; falls
   back to speed-based scoring without one).
-- Ghosting: hover-then-commit lines (tracked via pointer hover on stylus devices).
-- Tempo drills: draw at a set speed with a metronome (consistency of speed is scored).
 - Zigzags, dot-to-dot, mazes.
+- **Mirror and symmetry drills** (see 3.4).
 
 ### 3.2 Lettering
 Each *style* is a separate stroke-data set for A–Z, a–z, 0–9, and punctuation.
@@ -101,12 +106,23 @@ angle), letter spacing boxes.
 Each drawing exercise separates **construction strokes** (drawn light, scored loosely)
 from **final line strokes** (scored tightly).
 
+### 3.4 Mirror and symmetry drills
+Three drill types, used in both the pen and drawing modules:
+- **Live mirror**: the user draws one half of a shape (vase, butterfly, face outline)
+  and the app mirrors the stroke in real time across a vertical or horizontal axis.
+  Builds confidence and makes symmetric forms feel achievable.
+- **Complete the half**: the left half of a reference is shown; the user draws the right
+  half. Scored by mirroring the user's strokes and comparing to the shown half.
+- **Draw the mirror image**: a shape is shown; the user draws its reflection. Trains
+  spatial reasoning and reverse-direction strokes.
+Axes: vertical, horizontal, and (later) radial for mandalas and snowflakes.
+
 ---
 
 ## 4. Scoring engine
 
-Pure, tested TypeScript module. Input: reference strokes and user strokes. Output: a
-score 0–100 and a list of per-stroke findings.
+Pure, tested module with no UI dependencies. Input: reference strokes and user strokes.
+Output: a score 0–100 and a list of per-stroke findings.
 
 **Per-stroke metrics**
 - **Shape accuracy**: resample both paths to N points, compute mean and max deviation.
@@ -115,178 +131,257 @@ score 0–100 and a list of per-stroke findings.
   user's progress along the reference must be mostly monotonic.
 - **Start/end precision**: distance from reference endpoints; overshoot/undershoot.
 - **Smoothness**: jitter measured from second differences of the resampled path.
-- **Speed consistency**: variance of velocity (used for tempo drills).
+- **Speed consistency**: variance of velocity.
 - **Pressure profile**: correlation with the target profile when pressure is available.
 
 **Per-exercise metrics**
 - Stroke count and order match.
-- Time taken (informational, not penalized except in timed drills).
+- Time taken (informational, not penalized).
 
 **Feedback messages** are generated from the metrics with thresholds, e.g.
 "Started at the wrong end", "Wrong direction on stroke 2", "Shaky on the curve",
 "Overshot the baseline", "Too fast on the downstroke".
 
 **Tolerance** is per-exercise and per-tier (wide corridor for Trace, tighter for Ghost),
-with a global accessibility multiplier the user can set.
+multiplied by a user-level **tolerance multiplier** (see 5.1) and widened automatically
+for finger input versus stylus input.
 
 ---
 
-## 5. Technical architecture
+## 5. v1 feature set
 
-**Recommendation: web-first PWA, wrapped for app stores later.**
-Pointer Events give pressure, tilt, and pointer type on iPad (Apple Pencil), Android,
-Surface, and Wacom, and one codebase covers all of them. If latency on iPad ever becomes
-the limiting factor, the ink layer can be swapped for PencilKit inside a Capacitor shell
-without changing the content or scoring modules.
+Everything in this section ships in the first release, alongside the content modules
+and scoring engine above.
+
+### 5.1 Feedback and learning
+- **Replay overlay**: after an attempt, the user's ink animates on top of the reference
+  with off-path segments in red. Scrubbable. Also shows the ghost pen and the user's pen
+  side by side for direction mistakes.
+- **Live corridor feedback**: ink turns red and a light haptic tick fires when the pen
+  leaves the tolerance band. Can be turned off per user.
+- **Hint button**: replays the ghost pen for the current stroke only, without resetting
+  the attempt.
+- **Error heatmap**: for each exercise, the app accumulates where the user's ink deviates
+  from the reference across all attempts and renders it as a color overlay on the
+  reference shape. Warm colors show habitual trouble spots (e.g. "you always overshoot
+  the bowl of the a"). Shown on the exercise detail screen and in the progress view.
+  Implementation: bucket per-point deviation along the reference path's arc length (say
+  50 buckets per stroke), keep a running mean and count per bucket, render with a
+  sequential palette.
+- **Tolerance multiplier**: a single slider (Tight / Normal / Relaxed / Very relaxed) in
+  settings that scales every corridor. Useful for beginners, small phone screens, and
+  users with motor difficulties.
+- **Daily warm-up**: a 5-minute routine assembled from the user's weakest recent items
+  plus a couple of general control drills. One tap from the home screen.
+
+### 5.2 Guides and canvas
+- **Adjustable guides**: baseline, x-height, cap-height, slant angle, square grid, dot
+  grid, isometric grid. Saved per style with sensible defaults.
+- Zoom and canvas size so an exercise can be practiced small (finger control) or large
+  (arm movement, tablets).
+- Paper background options (plain, lined, dotted) mostly for feel.
+
+### 5.3 Input
+- Stylus and finger both supported. Pointer type is detected and tolerance widens for
+  finger input automatically.
+- Palm rejection when a stylus is active.
+- Pressure and tilt are captured and rendered when the hardware provides them (Apple
+  Pencil, S Pen, USI styluses); they are only *scored* in exercises that ask for them.
+
+### 5.4 Modes and accessibility
+- **Left-handed mode**: primary controls move to the left edge, slant guides flip, and
+  exercises that have a natural left-handed variant (e.g. horizontal strokes) offer it.
+- **Kids mode**: tuned for the younger end of the audience (11–14), not small children.
+  Larger strokes and targets, a slightly more relaxed default tolerance, shorter
+  sessions, feedback phrased as one short tip instead of a metrics list, optional sound
+  effects, celebratory animations on tier unlocks, and a simpler home screen. No change
+  to the underlying content. A parent or the user can toggle it in settings.
+- High-contrast and colorblind-safe palettes for guides, corridor, and heatmap.
+
+### 5.5 Content creation (in-house)
+- **Type-to-trace**: the user types a word or sentence, picks an installed style, and
+  the app assembles a tracing exercise from the style's glyph strokes with proper
+  spacing and joins. This is the main way users get "custom" content without us
+  accepting user-authored packs.
+- **Internal authoring tool**: a stroke editor (draw, snap, reorder, set direction,
+  tag construction vs final, export JSON) used by the content team. Ships in the
+  codebase behind a build flag, not in the public app.
+
+---
+
+## 6. Technical architecture
+
+**Recommendation: Flutter, one codebase for iOS and Android.**
+
+Why Flutter over the alternatives for this app:
+- Drawing is the whole product. Flutter renders its own canvas, so ink rendering and
+  guide animation are identical on both platforms and run at native frame rate.
+- Pointer events expose pressure, tilt, orientation, and pointer kind (stylus vs touch)
+  on both platforms without native plugins.
+- Fast to iterate on custom UI, which this app is mostly made of.
+
+Alternatives considered:
+- **React Native + Skia**: viable, similar result, but the stylus input path is less
+  mature and needs more native code.
+- **Fully native (Swift + PencilKit, Kotlin)**: best possible Pencil latency on iPad,
+  at the cost of two codebases and two scoring engines to keep in sync. Revisit only if
+  Flutter's stylus latency proves to be a problem in the prototype.
 
 | Layer | Choice | Why |
 |---|---|---|
-| UI | React + TypeScript + Vite | Fast iteration, big ecosystem |
-| Ink capture | Pointer Events + `getCoalescedEvents()` | Full-rate input, pressure, tilt, palm rejection via `pointerType` |
-| Ink rendering | Canvas 2D (user ink) over SVG (guides) | Canvas is fast for ink; SVG makes guides, arrows, and animation trivial |
-| Stroke look | `perfect-freehand` | Pressure-sensitive, good-looking strokes cheaply |
-| Smoothing | One-Euro filter on input | Removes jitter without lag |
-| State | Zustand | Small, simple |
-| Storage | IndexedDB via Dexie | Offline-first progress and attempts |
-| Sync (later) | Supabase or similar | Accounts and cross-device progress |
-| Tests | Vitest | Scoring engine needs solid unit tests |
-| PWA | vite-plugin-pwa | Installable, offline |
+| App | Flutter (Dart) | Single codebase, custom-canvas strengths |
+| Ink capture | `Listener` / `PointerEvent` with pressure, tilt, kind | Cross-platform stylus data |
+| Ink rendering | `CustomPainter` on a dedicated layer | Fast repaint of only the ink layer |
+| Guides and animation | Separate `CustomPainter` + Flutter animations | Ghost pen, fading guide, arrows |
+| Smoothing | One-Euro filter on input | Removes jitter without visible lag |
+| State | Riverpod | Testable, scales well |
+| Storage | SQLite via `drift` | Offline-first attempts, heatmap buckets, progress |
+| Content | JSON packs bundled as assets, versioned | In-house content, updated with app releases |
+| Scoring | Pure Dart package with unit tests | No UI dependency, easy to test against recorded attempts |
+| Haptics / audio | Platform channels via existing plugins | Corridor feedback, kids mode sounds |
+| Sync (later) | Firebase or Supabase | Accounts and cross-device progress |
 
 **Content format**: JSON packs. Stroke paths are SVG `d` strings in a normalized
 1000×1000 box so they render at any size.
 
-```ts
-type ExercisePack = { id; title; category: "pen" | "letters" | "drawing"; level; exercises: Exercise[] };
-type Exercise = {
-  id; title; instructions;
-  guides?: { baseline?; xHeight?; capHeight?; slantDeg? };
-  strokes: Stroke[];          // ordered
-  tolerance: { trace; fade; ghost; freehand };
-  tags: string[];
-};
-type Stroke = {
-  id; path: string;           // SVG path, direction = path order
-  kind: "construction" | "final";
-  pressure?: "light" | "heavy" | "ramp-up" | "ramp-down";
-  hint?: string;
-};
-type Attempt = { exerciseId; tier; startedAt; strokes: UserStroke[]; score; findings: Finding[] };
-type UserStroke = { points: { x; y; t; p?; tx?; ty? }[] };
+```
+ExercisePack { id, title, category: pen | letters | drawing, level, exercises[] }
+Exercise {
+  id, title, instructions,
+  guides?: { baseline, xHeight, capHeight, slantDeg },
+  strokes: Stroke[]            // ordered
+  tolerance: { trace, fade, ghost, freehand }
+  symmetry?: { axis: vertical | horizontal, mode: live | complete | reflect }
+  tags[]
+}
+Stroke { id, path, kind: construction | final, pressure?, hint?, leftHandedPath? }
+Attempt { exerciseId, tier, startedAt, strokes: UserStroke[], score, findings[] }
+UserStroke { points: [{ x, y, t, p?, tiltX?, tiltY? }] }
+HeatmapBucket { exerciseId, strokeId, bucketIndex, meanDeviation, count }
 ```
 
 **Sources of stroke data**
 - Hershey fonts (public domain single-stroke vector fonts) for monoline letters.
-- Hand-authored SVG for print, cursive, italic, brush, gothic. Build a small
-  **in-app authoring tool** (draw a stroke, snap, reorder, set direction, export JSON)
-  so content can be produced quickly and by non-developers.
-- KanjiVG / Make Me a Hanzi for CJK stroke order if those scripts are added.
-- Outline fonts (TTF/OTF) cannot give stroke order, but can power an "outline tracing"
-  mode for any font the user picks.
+- Hand-authored SVG for print, cursive, italic, brush, gothic, and all drawing content,
+  produced with the internal authoring tool.
 
 **Proposed repo layout**
 ```
-src/
-  ink/        pointer capture, smoothing, canvas renderer
-  guides/     SVG guide rendering, arrows, ghost-pen animation
-  scoring/    pure functions + tests
-  content/    JSON packs, loaders, schema validation
-  authoring/  stroke editor
-  progress/   Dexie models, mastery/unlock logic
-  ui/         screens and components
+app/                 Flutter app
+  lib/ink/           pointer capture, smoothing, ink painter
+  lib/guides/        guide painter, arrows, ghost-pen animation, symmetry mirror
+  lib/progress/      drift models, mastery/unlock logic, heatmap accumulation
+  lib/ui/            screens and components, kids mode theme, left-handed layout
+  lib/authoring/     internal stroke editor (build flag)
+packages/scoring/    pure Dart scoring engine + tests
+content/             JSON packs and the scripts that validate them
 ```
 
 ---
 
-## 6. Milestones
+## 7. Milestones
 
-**M0 — Prototype (1–2 weeks)**
-Canvas with stylus input, one exercise with directed strokes and ghost-pen demo, basic
-shape+direction score. Goal: confirm the tracing feels good on an iPad.
+**M0 — Prototype (2 weeks)**
+Flutter canvas with stylus and finger input on a real iPad and a real Android phone, one
+exercise with directed strokes and ghost-pen demo, basic shape+direction score. Goal:
+confirm the tracing feels good and latency is acceptable before building anything else.
 
-**M1 — MVP**
-Pen exercise pack, print alphabet, five practice tiers with unlocks, per-stroke feedback,
-local progress, PWA install, left-handed mode, guide overlays.
+**M1 — Core loop**
+Five practice tiers with unlocks, per-stroke feedback, replay overlay, live corridor
+feedback, hint button, adjustable guides, tolerance multiplier, local progress. Pen
+exercise pack and the print alphabet.
 
-**M2 — Content and authoring**
-Authoring tool, cursive and italic styles, drawing module (shapes → forms → perspective),
-replay of your attempt vs reference, daily warm-up routine, PDF worksheet export.
+**M2 — Content and modes**
+Internal authoring tool, block capitals, cursive, italic, drawing module (shapes → forms
+→ perspective → contour), mirror and symmetry drills, type-to-trace, left-handed mode,
+kids mode, error heatmap, daily warm-up.
 
-**M3 — Depth**
-Accounts and sync, gamification, spaced repetition on weak items, more scripts,
-custom exercises from imported SVG or typed text, community packs.
+**M3 — Launch**
+Remaining styles (monoline, brush, gothic), shading and gesture content, store
+listings, onboarding, monetization wiring (see section 8), analytics on where users
+get stuck.
+
+**M4 — After launch**
+Accounts and sync, then items from the Later list based on what users ask for.
 
 ---
 
-## 7. Other features worth adding
+## 8. Monetization options
 
-Grouped by how much they change the product. See the end of this section for a
-recommended cut for v1.
+Constraints that shape the choice:
+- Part of the audience is under 13, which brings COPPA (US) and similar rules. Targeted
+  ads and behavioral tracking are risky and, for a focused practice app, unpleasant.
+- Content is produced in-house, so there is a steady stream of new styles and packs
+  that can be sold.
+- Beginners drop off quickly if the free tier is too thin, and parents buy for the
+  younger users, so the value has to be obvious before the paywall.
+
+| Option | How it works | Pros | Cons |
+|---|---|---|---|
+| **Paid app** (one-time) | Charge up front, everything included | Simple, no paywall friction, parents understand it | Low download volume, no recurring revenue, hard to fund new content |
+| **Free + lifetime unlock** | Free core, one purchase unlocks everything | Popular with users who dislike subscriptions, easy to explain | Revenue per user caps out; new content has to be funded from new users |
+| **Free + subscription** | Free core, monthly/yearly for all styles, drawing courses, warm-ups, sync | Recurring revenue funds ongoing content, standard for learning apps | Subscription fatigue, harder sell to teens, churn when users feel "done" |
+| **Free + style/course packs** | Buy the cursive pack, the perspective course, etc. individually | Matches the in-house content pipeline, pay for what you want | Many small decisions for the user, complex store catalog, lower total spend |
+| **Hybrid: subscription or lifetime** | Offer both a subscription and a one-time "lifetime" price | Captures both kinds of buyer, common pattern in this category | Two prices to explain; lifetime price must be set high enough |
+| **School and clinic licensing** | Site licenses for schools, tutoring centers, occupational therapists | Sticky, larger contracts, fits the middle-school audience | Slow sales cycle, needs a teacher dashboard and procurement support |
+| **Ads** | Free with banner or rewarded ads | Zero-friction free tier | Bad fit for under-13 users, breaks concentration during tracing, low revenue |
+
+**Recommendation for launch**: free core with a hybrid Pro unlock.
+- Free: pen exercises, print alphabet, first drawing pack, daily warm-up, all feedback
+  features. Enough to get real value and form a habit.
+- Pro: all lettering styles, full drawing curriculum, type-to-trace in every style,
+  error heatmap history, and later sync. Offered as a yearly subscription and a lifetime
+  purchase at roughly 2.5–3× the yearly price.
+- Add a family plan once accounts exist, and pursue school licensing in the year after
+  launch if teachers show up in the user base.
+- No ads.
+
+---
+
+## 9. Later (saved for after launch)
 
 **Feedback and learning**
-- Replay overlay: your attempt animated on top of the reference, with off-path segments
-  in red.
-- Heatmap of your errors on a letter across many attempts (shows the habitual mistake).
-- Side-by-side "before vs now" from your first attempt to your latest.
-- Live corridor feedback: ink turns red and a subtle haptic/audio tick when you leave the
-  tolerance band.
-- Hint button that plays the ghost pen for just the current stroke.
-- Spaced repetition: letters and shapes you score poorly on come back sooner.
-
-**Input and hardware**
-- Pressure and tilt training with a live pressure meter (stylus devices).
-- Stylus-only mode with palm rejection; finger mode with a larger tolerance.
-- Hover "ghosting" for stylus users who want to rehearse a line before committing.
+- Side-by-side "before vs now" from first attempt to latest.
+- Spaced repetition: poorly scored letters and shapes come back sooner.
+- Ghosting: hover-then-commit lines for stylus users who want to rehearse.
 - Metronome / tempo mode for consistent speed.
-- Non-dominant hand mode (separate progress track; good for rehabilitation).
+- Non-dominant hand mode with its own progress track.
 
 **Guides and canvas**
-- Adjustable guide lines: baseline, x-height, slant, grid, dot grid, isometric grid.
-- Paper types and zoom so an exercise can be practiced small (finger control) or large
-  (arm movement).
-- Mirror-drawing and symmetry exercises (draw one half, app mirrors the other).
-- Grid-method copying: reference image and your canvas share a grid.
+- Grid-method copying: a reference photo and the canvas share a grid.
+- Radial symmetry for mandalas and snowflakes.
 
 **Content creation**
-- Type any text in any installed style → instant tracing exercise.
 - Import an SVG or photo, auto-trace to strokes, then fix in the authoring tool.
-- Photograph your own handwriting to generate a "your current style" reference and
-  compare it to the target style.
-- Printable PDF worksheets that match the on-screen exercises.
+- Photograph your own handwriting to generate a "your current style" reference.
+- Printable PDF worksheets matching the on-screen exercises.
+- Outline-tracing mode for any installed outline font.
 
 **Motivation and structure**
-- Daily 5-minute warm-up routine assembled from your weak areas.
-- Streaks, XP, badges, and "mastery tests" that gate a level.
+- Streaks, XP, badges, mastery tests that gate a level.
 - Courses: a linear path (e.g. "Cursive in 30 days") over the exercise library.
 - Timed drills and personal bests.
 
-**Accessibility and audiences**
-- Tolerance multiplier and larger targets for motor-impairment or occupational-therapy
-  use; a "therapist mode" with exportable progress reports.
-- Kid mode: bigger strokes, sound effects, simpler UI, no text-heavy feedback.
-- Left-handed mode: UI controls on the left, slant guides flipped, some stroke
-  directions offered in a left-handed variant.
-- High-contrast and colorblind-safe guide colors.
+**Audiences**
+- Therapist mode with exportable progress reports.
+- Teacher dashboard for school licensing.
 
 **More scripts and styles**
 - Greek, Cyrillic, Hebrew, Arabic, Devanagari, Japanese kana, Chinese characters
-  (existing open stroke-order datasets make CJK feasible).
-- Calligraphy nibs: broad-edge and pointed-pen simulation (nib angle rendered from
-  tilt or a fixed angle).
+  (open stroke-order datasets make CJK feasible).
+- Calligraphy nibs: broad-edge and pointed-pen simulation from tilt or a fixed angle.
 
-**Recommended for v1**: replay overlay, live corridor feedback, hint button, adjustable
-guides, left-handed mode, daily warm-up, tolerance multiplier, and type-to-trace using
-the styles already in the app. These are cheap given the core engine and make the
-tracing loop feel complete. Everything else can follow once real users show where the
-demand is.
+**Community**
+- Sharing and user-authored exercise packs, if content demand outgrows the in-house
+  pipeline.
 
 ---
 
-## 8. Open questions
+## 10. Open questions
 
-- **Platform**: is iPad + Apple Pencil the primary target, or is phone/finger tracing
-  equally important? This shifts tolerance defaults and UI density.
-- **Audience**: adults learning lettering, kids learning handwriting, or therapy use?
-  Each wants different defaults and tone.
-- **Monetization**: free with paid style packs, or subscription for courses and sync?
-- **Content ownership**: hand-author all styles in-house, or accept community packs
-  from day one?
+- **Monetization**: pick from section 8. The recommendation is free core + hybrid Pro.
+- **Under-13 handling**: age gate at signup with accounts optional, or no accounts at all
+  in v1 to avoid the compliance surface? The Later list assumes accounts arrive in M4.
+- **Tablet vs phone emphasis**: both are supported, but the prototype should decide
+  whether the layout is designed tablet-first and adapted down, or phone-first and
+  scaled up.
