@@ -6,10 +6,14 @@ where to start, which way to go, and in what order. The user traces with a finge
 stylus and gets scored on accuracy, direction, order, and control.
 
 **Decisions so far**
-- Primary platform: native mobile apps (iOS and Android, phones and tablets).
+- Primary platform: native mobile apps (iOS and Android). Designed phone-first, then
+  adapted up to tablets.
 - Audience: beginners to intermediate, middle school age (11+) and older.
 - Content: authored in-house. No community packs for now.
-- Monetization: undecided. Options are laid out in section 8.
+- Monetization: free core with a hybrid Pro unlock (yearly subscription or lifetime
+  purchase). No ads. Details in section 8.
+- Accounts: none in v1. All progress is on-device; purchases are tied to the app store
+  account, not to us. Accounts and sync arrive after launch.
 
 ---
 
@@ -20,7 +24,8 @@ stylus and gets scored on accuracy, direction, order, and control.
 - Cover three content areas with one shared engine: pen exercises, lettering, drawing.
 - Give immediate, specific feedback per stroke ("started at the wrong end", "drifted
   right on the curve"), not just a pass/fail.
-- Work offline, feel great with a stylus, and still be usable with a finger on a phone.
+- Work offline, be genuinely good with a finger on a phone, and feel great with a
+  stylus on a tablet.
 
 **Non-goals (for v1)**
 - Free-form sketching app with layers, brushes, and export to PSD.
@@ -179,11 +184,17 @@ and scoring engine above.
   grid, isometric grid. Saved per style with sensible defaults.
 - Zoom and canvas size so an exercise can be practiced small (finger control) or large
   (arm movement, tablets).
+- Phone-first layout: the canvas takes the full width in portrait, controls sit in a
+  single thumb-reachable bar at the bottom, and the exercise view scrolls horizontally
+  for words and sentences rather than shrinking the letters. Tablets get a wider canvas,
+  a side panel for guides and replay, and landscape support.
 - Paper background options (plain, lined, dotted) mostly for feel.
 
 ### 5.3 Input
-- Stylus and finger both supported. Pointer type is detected and tolerance widens for
-  finger input automatically.
+- Finger is the default input and every exercise must be passable with it on a
+  6-inch screen. Stylus is detected automatically and tightens the tolerance.
+- Fingertip occlusion: the active stroke's guide is offset or magnified in a small
+  inset so the user can see where the path goes under their finger.
 - Palm rejection when a stylus is active.
 - Pressure and tilt are captured and rendered when the hardware provides them (Apple
   Pencil, S Pen, USI styluses); they are only *scored* in exercises that ask for them.
@@ -239,7 +250,15 @@ Alternatives considered:
 | Content | JSON packs bundled as assets, versioned | In-house content, updated with app releases |
 | Scoring | Pure Dart package with unit tests | No UI dependency, easy to test against recorded attempts |
 | Haptics / audio | Platform channels via existing plugins | Corridor feedback, kids mode sounds |
-| Sync (later) | Firebase or Supabase | Accounts and cross-device progress |
+| Purchases | StoreKit 2 / Google Play Billing via `in_app_purchase` | Pro entitlement without our own accounts; restore purchases from the store |
+| Sync (later) | Firebase or Supabase | Accounts and cross-device progress, after launch |
+
+**No accounts in v1**: all attempts, heatmaps, and progress live in the on-device
+database. The Pro entitlement is read from the app store receipt, so a user on a new
+phone taps "Restore purchases" and keeps Pro. Progress does not transfer between
+devices until accounts arrive after launch; the app should offer a local backup/restore
+file (export to Files / share sheet) so a phone upgrade does not wipe progress. No
+personal data is collected, which keeps the under-13 part of the audience simple.
 
 **Content format**: JSON packs. Stroke paths are SVG `d` strings in a normalized
 1000×1000 box so they render at any size.
@@ -282,9 +301,10 @@ content/             JSON packs and the scripts that validate them
 ## 7. Milestones
 
 **M0 — Prototype (2 weeks)**
-Flutter canvas with stylus and finger input on a real iPad and a real Android phone, one
-exercise with directed strokes and ghost-pen demo, basic shape+direction score. Goal:
-confirm the tracing feels good and latency is acceptable before building anything else.
+Flutter canvas with finger input on a mid-range Android phone and an iPhone, plus
+stylus on one tablet, one exercise with directed strokes and ghost-pen demo, basic
+shape+direction score. Goal: confirm finger tracing on a phone feels good and stylus
+latency is acceptable before building anything else.
 
 **M1 — Core loop**
 Five practice tiers with unlocks, per-stroke feedback, replay overlay, live corridor
@@ -298,17 +318,20 @@ kids mode, error heatmap, daily warm-up.
 
 **M3 — Launch**
 Remaining styles (monoline, brush, gothic), shading and gesture content, store
-listings, onboarding, monetization wiring (see section 8), analytics on where users
-get stuck.
+listings, onboarding, Pro paywall and purchase flow with restore, local backup/restore,
+tablet layout pass, privacy-safe on-device analytics on where users get stuck.
 
 **M4 — After launch**
-Accounts and sync, then items from the Later list based on what users ask for.
+Accounts and sync (with an age gate and parental consent flow for under-13 users),
+family plan, then items from the Later list based on what users ask for.
 
 ---
 
-## 8. Monetization options
+## 8. Monetization
 
-Constraints that shape the choice:
+**Decision: free core with a hybrid Pro unlock. No ads.**
+
+Constraints that shaped the choice:
 - Part of the audience is under 13, which brings COPPA (US) and similar rules. Targeted
   ads and behavioral tracking are risky and, for a focused practice app, unpleasant.
 - Content is produced in-house, so there is a steady stream of new styles and packs
@@ -326,15 +349,20 @@ Constraints that shape the choice:
 | **School and clinic licensing** | Site licenses for schools, tutoring centers, occupational therapists | Sticky, larger contracts, fits the middle-school audience | Slow sales cycle, needs a teacher dashboard and procurement support |
 | **Ads** | Free with banner or rewarded ads | Zero-friction free tier | Bad fit for under-13 users, breaks concentration during tracing, low revenue |
 
-**Recommendation for launch**: free core with a hybrid Pro unlock.
+**What ships at launch**
 - Free: pen exercises, print alphabet, first drawing pack, daily warm-up, all feedback
-  features. Enough to get real value and form a habit.
-- Pro: all lettering styles, full drawing curriculum, type-to-trace in every style,
-  error heatmap history, and later sync. Offered as a yearly subscription and a lifetime
-  purchase at roughly 2.5–3× the yearly price.
-- Add a family plan once accounts exist, and pursue school licensing in the year after
-  launch if teachers show up in the user base.
-- No ads.
+  features (replay, corridor, hint, heatmap for free content). Enough to get real value
+  and form a habit.
+- Pro: all lettering styles, full drawing curriculum, mirror and symmetry drills beyond
+  the starter set, type-to-trace in every style, and heatmap history across all content.
+  Offered as a yearly subscription and a lifetime purchase at roughly 2.5–3× the yearly
+  price. A short free trial on the subscription is worth testing.
+- Purchases go through StoreKit and Google Play Billing; there is no account on our
+  side, so "Restore purchases" is the recovery path.
+- Paywall placement: shown when the user opens Pro content or finishes the free print
+  alphabet, never mid-exercise.
+- Later: family plan once accounts exist; school licensing in the year after launch if
+  teachers show up in the user base.
 
 ---
 
@@ -377,11 +405,15 @@ Constraints that shape the choice:
 
 ---
 
-## 10. Open questions
+## 10. Risks to watch
 
-- **Monetization**: pick from section 8. The recommendation is free core + hybrid Pro.
-- **Under-13 handling**: age gate at signup with accounts optional, or no accounts at all
-  in v1 to avoid the compliance surface? The Later list assumes accounts arrive in M4.
-- **Tablet vs phone emphasis**: both are supported, but the prototype should decide
-  whether the layout is designed tablet-first and adapted down, or phone-first and
-  scaled up.
+- **Finger tracing on small screens** is the whole bet of phone-first. If the M0
+  prototype shows that letters at phone scale are too fiddly, the fix is larger default
+  canvas scale with horizontal scrolling, not a switch to tablet-first.
+- **Lost progress without accounts.** Local backup/restore must be easy to find, and
+  the app should nudge users to back up before a major OS upgrade.
+- **Content velocity.** Every style is 60+ hand-authored glyphs plus words and joins.
+  The authoring tool needs to exist before M2 content work starts.
+- **Store review for under-13 audiences.** Even with no accounts, both stores ask
+  about the target age group; keep analytics on-device and avoid third-party SDKs that
+  collect identifiers.
