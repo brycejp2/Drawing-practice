@@ -1,0 +1,55 @@
+{
+  "id": "m0",
+  "title": "Starter drills",
+  "category": "pen",
+  "level": 1,
+  "exercises": [
+    {
+      "id": "line-h",
+      "title": "Horizontal line",
+      "instructions": "Start at the green dot and draw one smooth line to the right.",
+      "strokes": [
+        { "id": "s1", "path": "M 150 500 L 850 500", "kind": "final" }
+      ],
+      "tolerance": { "trace": 45, "fade": 35, "ghost": 30, "freehand": 60 },
+      "tags": ["pen", "line"]
+    },
+    {
+      "id": "wave",
+      "title": "Wave",
+      "instructions": "Follow the arrows through the two curves without stopping.",
+      "strokes": [
+        { "id": "s1", "path": "M 150 500 C 300 200 400 200 500 500 C 600 800 700 800 850 500", "kind": "final" }
+      ],
+      "tolerance": { "trace": 45, "fade": 35, "ghost": 30, "freehand": 60 },
+      "tags": ["pen", "curve"]
+    },
+    {
+      "id": "circle-ccw",
+      "title": "Circle (counter-clockwise)",
+      "instructions": "Start at the top and go left, all the way around in one motion.",
+      "strokes": [
+        {
+          "id": "s1",
+          "path": "M 500 200 C 334 200 200 334 200 500 C 200 666 334 800 500 800 C 666 800 800 666 800 500 C 800 334 666 200 500 200",
+          "kind": "final"
+        }
+      ],
+      "tolerance": { "trace": 50, "fade": 40, "ghost": 35, "freehand": 70 },
+      "tags": ["pen", "circle"]
+    },
+    {
+      "id": "print-A",
+      "title": "Capital A (print)",
+      "instructions": "Three strokes: down-left, down-right, then the crossbar left to right.",
+      "guides": { "baseline": 820, "capHeight": 180 },
+      "strokes": [
+        { "id": "s1", "path": "M 500 180 L 260 820", "kind": "final", "hint": "Start at the top, pull down and to the left." },
+        { "id": "s2", "path": "M 500 180 L 740 820", "kind": "final", "hint": "Back to the top, pull down and to the right." },
+        { "id": "s3", "path": "M 350 580 L 650 580", "kind": "final", "hint": "Crossbar from left to right." }
+      ],
+      "tolerance": { "trace": 40, "fade": 32, "ghost": 28, "freehand": 55 },
+      "tags": ["letters", "print", "uppercase"]
+    }
+  ]
+}

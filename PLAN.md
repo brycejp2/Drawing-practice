@@ -284,27 +284,32 @@ HeatmapBucket { exerciseId, strokeId, bucketIndex, meanDeviation, count }
 - Hand-authored SVG for print, cursive, italic, brush, gothic, and all drawing content,
   produced with the internal authoring tool.
 
-**Proposed repo layout**
+**Repo layout** (M0 in place; later directories marked *planned*)
 ```
-app/                 Flutter app
-  lib/ink/           pointer capture, smoothing, ink painter
-  lib/guides/        guide painter, arrows, ghost-pen animation, symmetry mirror
-  lib/progress/      drift models, mastery/unlock logic, heatmap accumulation
-  lib/ui/            screens and components, kids mode theme, left-handed layout
-  lib/authoring/     internal stroke editor (build flag)
-packages/scoring/    pure Dart scoring engine + tests
-content/             JSON packs and the scripts that validate them
+app/                     Flutter app
+  assets/content/        JSON packs bundled with the app
+  lib/content/           pack models and loader
+  lib/ink/               pointer capture, One-Euro smoothing, ink painter
+  lib/guides/            guide painter, arrows, corridor, ghost-pen animation
+  lib/ui/                screens and components
+  lib/progress/          planned: drift models, mastery/unlock, heatmap buckets
+  lib/authoring/         planned: internal stroke editor (build flag)
+  test/                  widget tests (trace a line, wrong direction, multi-stroke)
+  tool/                  dev-only preview renderer
+packages/scoring/        pure Dart scoring engine + tests
 ```
 
 ---
 
 ## 7. Milestones
 
-**M0 — Prototype (2 weeks)**
-Flutter canvas with finger input on a mid-range Android phone and an iPhone, plus
-stylus on one tablet, one exercise with directed strokes and ghost-pen demo, basic
-shape+direction score. Goal: confirm finger tracing on a phone feels good and stylus
-latency is acceptable before building anything else.
+**M0 — Prototype (2 weeks)** — *code in repo, device testing pending*
+Flutter canvas with finger and stylus input, a starter pack of four exercises with
+directed strokes, ghost-pen demo and per-stroke hint, corridor display, per-stroke
+scoring with findings, results sheet, undo/clear. Remaining M0 work is on devices: run
+on a mid-range Android phone, an iPhone, and one tablet with a stylus, then tune
+smoothing and tolerance defaults. Goal: confirm finger tracing on a phone feels good and
+stylus latency is acceptable before building anything else.
 
 **M1 — Core loop**
 Five practice tiers with unlocks, per-stroke feedback, replay overlay, live corridor
